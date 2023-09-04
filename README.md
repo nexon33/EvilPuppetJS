@@ -15,7 +15,6 @@ EvilPuppet is a proof-of-concept man-in-the-middle tool that uses Puppeteer in t
 ## Prerequisites
 
 - Node.js
-- Puppeteer
 
 ## Installation
 
@@ -34,10 +33,34 @@ npm install
 
 ## Usage
 
-1. Start the server:
+1. Set config inside config.js
+
+2. Start the server:
 ```bash
 node app.js
 ```
+
+## Known problems
+
+ - Syncing the textfields between the browsers can be improved
+
+ - Many other things too much to list for now.
+
+## TODO
+
+ - Make use of MutationObserver instead of a loop to detect changes. (Maybe getting rid of diffDOM?)
+
+ - Improve syncing between text fields.
+ 
+ - Further improve typing 
+
+ - Add support for copy/paste and autofill
+
+ - Complete refactoring the code and convert it to typescript.
+
+ - Add mouse hover and drag.
+
+ - fix the cssparser and html parser to make it more robust in edgecases. Especially get rid of regex.
 
 ## Safety and Responsibility
 This tool is powerful and can be misused. Always get proper permissions before conducting any testing. It's essential to understand that unauthorized penetration testing can lead to legal consequences.
