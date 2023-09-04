@@ -54,7 +54,22 @@ app.get('/domdiffer.js', (req, res) => {
 app.get('/domdifferscript.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'domdifferscript.js'));
 });
-
+app.get('/getContent', (req, res) => {
+    const url = decodeURIComponent(req.query.url);
+    const filepath = path.join(CACHED_RESOURCES_DIR, url);
+    if (fs.existsSync(filepath)) {
+        var data = JSON.parse(fs.readFileSync(filepath));
+        res.setHeader('Content-Type', data.mime);
+        if (!data.mime.startsWith('text/')) {
+            // Convert base64 back to buffer for non-textual content
+            res.send(Buffer.from(data.data, 'base64'));
+        } else {
+            res.send(data.data);
+        }
+    } else {
+        res.status(404).send('File not found');
+    }
+});
 // Ensure required directories exist
 [CACHED_RESOURCES_DIR].forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -215,28 +230,11 @@ io.on('connection', async (socket) => {
         if (changes.main || changes.iframes.length > 0) {
             socket.emit('domchanges', changes);
         }
-
-        //await sleep(100);
     }
 });
 
 
-app.get('/getContent', (req, res) => {
-    const url = decodeURIComponent(req.query.url);
-    const filepath = path.join(CACHED_RESOURCES_DIR, url);
-    if (fs.existsSync(filepath)) {
-        var data = JSON.parse(fs.readFileSync(filepath));
-        res.setHeader('Content-Type', data.mime);
-        if (!data.mime.startsWith('text/')) {
-            // Convert base64 back to buffer for non-textual content
-            res.send(Buffer.from(data.data, 'base64'));
-        } else {
-            res.send(data.data);
-        }
-    } else {
-        res.status(404).send('File not found');
-    }
-});
+
 
 async function SelectOnPage(selection, page) {
 
@@ -285,7 +283,7 @@ async function SelectOnPage(selection, page) {
     }, selection);
 }
 
-// Read the JSON file
+
 function RemoveInvalidAttributesFromDiff(diffobj) {
     return diffobj;
     try {
@@ -336,7 +334,9 @@ function RemoveInvalidAttributesFromDiff(diffobj) {
 
 
 
-
+module.exports = {
+    SelectOnPage
+}
 
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

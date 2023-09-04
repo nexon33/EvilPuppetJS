@@ -1,3 +1,7 @@
+const {
+    SelectOnPage
+} = require('../app')
+
 async function setupSocketEvents(socket, page, puppet) {
 
     socket.on('click', async (click) => {
