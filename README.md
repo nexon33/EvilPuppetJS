@@ -62,6 +62,10 @@ node app.js
 
  - fix the cssparser and html parser to make it more robust in edgecases. Especially get rid of regex.
 
+ - Fix clicking and other functions inside iframes (only rendering currently works)
+
+ - ...
+
 ## Safety and Responsibility
 This tool is powerful and can be misused. Always get proper permissions before conducting any testing. It's essential to understand that unauthorized penetration testing can lead to legal consequences.
 
