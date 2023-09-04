@@ -21,7 +21,22 @@ EvilPuppet is a proof-of-concept man-in-the-middle tool that uses Puppeteer in t
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/EvilPuppet.git
+git clone https://github.com/nexon33/EvilPuppetJS.git
+```
+2. Navigate into the directory:
+```bash
+cd EvilPuppetJS
+```
+3. Install the dependencies
+```bash
+npm install
+```
+
+## Usage
+
+1. Start the server:
+```bash
+node app.js
 ```
 
 ## Safety and Responsibility
@@ -34,4 +49,5 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 This project is licensed under the MIT License - see the LICENSE.md file for details.
 
 
-Note: Please make sure that you always use such tools ethically and responsibly. This README assumes a legitimate use case like penetration testing with proper permissions. Always obtain permission before testing on any system or network.
+## Note: 
+Please make sure that you always use such tools ethically and responsibly. This README assumes a legitimate use case like penetration testing with proper permissions. Always obtain permission before testing on any system or network.
