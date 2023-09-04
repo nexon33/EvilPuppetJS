@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <div></div>
+        <script src="/domdiffer.js"></script>
+        <script>
+            var dd = new diffDOM.DiffDOM();
+            window.processIframe = function(args){
+                console.log(args);
+                var result = dd.apply(args.target, args.diff);
+                return result;
+            }
+        </script>
+    </body>
+</html>
