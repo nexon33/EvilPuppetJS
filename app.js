@@ -72,10 +72,18 @@ io.on('connection', async (socket) => {
             '--disable-features=IsolateOrigins,site-per-process'
         ]
     });
+    socket.on('disconnect', async () => {
+        try {
+            await puppet.close();
+        } catch (error) {
+            console.log(error);
+        }
+
+    });
     const page = await puppet.newPage();
     await page.setViewport({ width: 1366, height: 768 });
 
-    await setupSocketEvents(socket, page, puppet);
+    await setupSocketEvents(socket, page);
     await setupChangeListeners(socket, page);
 
     page.goto(BASE_URL);

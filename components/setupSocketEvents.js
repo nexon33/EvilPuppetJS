@@ -1,13 +1,5 @@
 async function setupSocketEvents(socket, page, puppet) {
 
-    socket.on('disconnect', async () => {
-        try {
-            await puppet.close();
-        } catch (error) {
-            console.log(error);
-        }
-
-    });
     socket.on('click', async (click) => {
         try {
             const element = await page.waitForSelector(click.cssPath);
