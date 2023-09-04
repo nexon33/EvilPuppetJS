@@ -42,7 +42,7 @@ const {
 puppeteer.use(pluginStealth());
 
 
-app.get('/domdiffer', (req, res) => {
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'domdiffer.html'));
 });
 app.get('/iframeScript.html', (req, res) => {
@@ -111,6 +111,7 @@ io.on('connection', async (socket) => {
     var oldiframes = [];
     var previousResult = null;
 
+    //main loop, still needs to be refactored
     while (socket.connected) {
 
         var data = await getMainAndIframesWithoutScripts(page);

@@ -42,7 +42,9 @@ node app.js
 
 ## Known problems
 
- - Syncing the textfields between the browsers can be improved
+ - Syncing the textfields between the browsers can be improved.
+
+ - diffDOM library issues which end up also being EvilPuppet's problems.
 
  - Many other things too much to list for now.
 
@@ -62,7 +64,7 @@ node app.js
 
  - fix the cssparser and html parser to make it more robust in edgecases. Especially get rid of regex.
 
- - Fix clicking and other functions inside iframes (only rendering currently works)
+ - Fix clicking and other functions inside iframes. (only rendering currently works)
 
  - ...
 
