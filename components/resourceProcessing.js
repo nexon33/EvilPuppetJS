@@ -14,10 +14,13 @@ const {
     stripCssComments,
     sleep,
     getHashedFileName,
-    toAbsoluteUrl
+    toAbsoluteUrl,
+    trimChar
 } = require('./utils.js')
 
 
+//tries to download a resource and returns the link to the downloaded resource. 
+// Will check cache for the resourse first
 async function downloadResource(url) {
     if (url.startsWith('data:')) {
         return url;
@@ -35,7 +38,7 @@ async function downloadResource(url) {
         if (!response.data) {
             throw new Error(`No data received for ${url}`);
         }
-
+        //get mime type
         const mimeType = response.headers['content-type'] || 'unknown';
 
         let dataToWrite = response.data;
@@ -63,11 +66,14 @@ async function downloadResource(url) {
         return CONTENT_URL + hashedFileName;
     }
 }
+
+//takes in a css string and will download all url declarations inside the css string
 async function replaceCssUrlsAndGetContent(csscontent, baseurl) {
 
     // Updated regex
     const regex = /url\(\s*(?:(["'])(?:(?!\1).)*(?<!\\)\1|[^'"\s)]+?)\s*\)/g;
     const downloadPromises = [];
+    //replace all urls with downloadResource url result
     csscontent = csscontent.replace(regex, (match, quote, url) => {
         // If URL is inside quotes, `url` captures it; otherwise, `url` is undefined and the URL is in `match`.
         var actualURL = match.slice(4, -1);
@@ -93,6 +99,8 @@ async function replaceCssUrlsAndGetContent(csscontent, baseurl) {
     return csscontent;
 }
 
+//processes html content which means it basically removes scripts 
+//and replaces urls to point to the local cache which contains modified css files etc.
 async function processHtmlContent(content, baseurl) {
     const $content = cheerio.load(content);
     $content('script').remove();
@@ -107,12 +115,14 @@ async function processHtmlContent(content, baseurl) {
 
     $content('*').contents().each(function () {
         const elem = $content(this);
+        //remove comments
         if (this.type === 'comment') {
             elem.remove();
         } else {
             const attrs = elem.attr();
             for (let attr in attrs) {
                 let attributeValue = elem.attr(attr);
+                //removes invalid attributes that are not following html spec and cause errors
                 if (attr.includes('[') || attr.includes(']')) {
                     elem.removeAttr(attr);
                 } else {
@@ -122,20 +132,21 @@ async function processHtmlContent(content, baseurl) {
             }
         }
     });
-
+    
+    //process style tags
     await Promise.all($content('*[style]').map(async (_, element) => {
         let inlineCSS = $content(element).attr('style');
         let newinlineCSS = await replaceCssUrlsAndGetContent(inlineCSS, baseurl);
         //need to replace double quotes with single quotes because double quotes don't load images inside url tags
         $content(element).attr('style', newinlineCSS.replace('"', '\''));
     }).get());
-
+    //process style nodes
     await Promise.all($content('style').map(async (_, element) => {
         let internalCSS = $content(element).text();
         internalCSS = await replaceCssUrlsAndGetContent(internalCSS, baseurl);
         $content(element).text(internalCSS);
     }).get());
-
+    //process image urls
     await Promise.all($content('img').map(async (_, element) => {
         var src = $content(element).attr('src');
         if (src) {
@@ -145,7 +156,7 @@ async function processHtmlContent(content, baseurl) {
         }
 
     }).get());
-
+    //processes linked css stylesheets
     await Promise.all($content('link[rel="stylesheet"]').map(async (_, element) => {
         const href = toAbsoluteUrl(baseurl, $content(element).attr('href'));
         var data = await downloadResource(href);
@@ -155,6 +166,8 @@ async function processHtmlContent(content, baseurl) {
     return $content.html();
 }
 
+//tries to get the complete html sourcecode of the loaded page, including iframes
+//this 
 async function getMainAndIframesWithoutScripts(page) {
     var limitCounter = 0;
     while (limitCounter < 100) {
@@ -162,27 +175,27 @@ async function getMainAndIframesWithoutScripts(page) {
         try {
             const iframesWithId = [];
 
-            async function getInputsAndTextareas(frame) {
-                return await frame.$$eval('input, textarea', elements => {
-                    return elements.map(el => {
-                        let path = [];
-                        let parent = el;
-                        while (parent) {
-                            const tagName = parent.tagName.toLowerCase();
-                            let selector = tagName;
-                            if (parent.id) {
-                                selector += `#${parent.id}`;
-                            }
-                            path.unshift(selector);
-                            parent = parent.parentElement;
-                        }
-                        return {
-                            value: el.value,
-                            csspath: path.join(' > ')
-                        };
-                    });
-                });
-            }
+            // async function getInputsAndTextareas(frame) {
+            //     return await frame.$$eval('input, textarea', elements => {
+            //         return elements.map(el => {
+            //             let path = [];
+            //             let parent = el;
+            //             while (parent) {
+            //                 const tagName = parent.tagName.toLowerCase();
+            //                 let selector = tagName;
+            //                 if (parent.id) {
+            //                     selector += `#${parent.id}`;
+            //                 }
+            //                 path.unshift(selector);
+            //                 parent = parent.parentElement;
+            //             }
+            //             return {
+            //                 value: el.value,
+            //                 csspath: path.join(' > ')
+            //             };
+            //         });
+            //     });
+            // }
 
             async function processFrame(frame) {
                 const iframes = await frame.$$("iframe");
@@ -207,12 +220,12 @@ async function getMainAndIframesWithoutScripts(page) {
                     const iframeURL = await iframeFrame.url();
                     iframeContent = await processHtmlContent(iframeContent, iframeURL);
 
-                    const iframeInputs = await getInputsAndTextareas(iframeFrame);
+                    //const iframeInputs = await getInputsAndTextareas(iframeFrame);
 
                     const iframeobj = {
                         selector: iframeSelector,
                         content: iframeContent,
-                        iframeInputs: iframeInputs
+                        //iframeInputs: iframeInputs
                     };
 
                     if (!iframesWithId.some(existingIframe => existingIframe.selector === iframeSelector)) {
@@ -234,7 +247,7 @@ async function getMainAndIframesWithoutScripts(page) {
             // Process the main page's content
             pageContent = await processHtmlContent(pageContent, mainPageURL);
 
-            const mainInputs = await getInputsAndTextareas(page);
+            //const mainInputs = await getInputsAndTextareas(page);
 
             const $ = cheerio.load(pageContent);
 
@@ -245,7 +258,8 @@ async function getMainAndIframesWithoutScripts(page) {
 
             var resulthtml = $.html();
 
-            return { mainhtml: resulthtml, mainInputs: mainInputs, iframes: iframesWithId };
+            return { mainhtml: resulthtml, //mainInputs: mainInputs,
+                 iframes: iframesWithId };
         }
         catch (error) {
             console.log(error);

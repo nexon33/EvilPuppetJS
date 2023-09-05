@@ -1,6 +1,51 @@
-const {
-    SelectOnPage
-} = require('../app')
+
+//used to select text on a puppeteer page
+async function SelectOnPage(selection, page) {
+
+    await page.evaluate((selection) => {
+        // Utility function to get a node from a path
+        function getNodeByCssPath(path) {
+            return document.querySelector(path);
+        }
+        function getNodeFromRelativePath(rootElement, relativePath) {
+            if (!relativePath || !rootElement) {
+                return null;
+            }
+            const steps = relativePath.split('/');
+            let currentNode = rootElement;
+            for (const step of steps) {
+                const [nodeType, index] = step.split(':').map(Number);
+                if (!currentNode.childNodes[index] || currentNode.childNodes[index].nodeType !== nodeType) {
+                    return null;
+                }
+                currentNode = currentNode.childNodes[index];
+            }
+            return currentNode;
+        }
+
+        const startNodeParentElement = getNodeByCssPath(selection.startCssPath);
+        const endNodeParentElement = getNodeByCssPath(selection.endCssPath);
+        var startNode;
+        var endNode;
+        if (selection.startNodePath && selection.endNodePath) {
+            startNode = getNodeFromRelativePath(startNodeParentElement, selection.startNodePath);
+            endNode = getNodeFromRelativePath(endNodeParentElement, selection.endNodePath);
+        }
+        else {
+            startNode = startNodeParentElement;
+            endNode = endNodeParentElement;
+        }
+
+        const range = document.createRange();
+        range.setStart(startNode, selection.startOffset);
+        range.setEnd(endNode, selection.endOffset);
+
+        const newSelection = window.getSelection();
+        newSelection.removeAllRanges();
+        newSelection.addRange(range);
+
+    }, selection);
+}
 
 async function setupSocketEvents(socket, page, puppet) {
 

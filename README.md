@@ -40,6 +40,8 @@ npm install
 node app.js
 ```
 
+3. Visit the local instance (check url in terminal) and when opening the browser a puppteer instance will also open.
+
 ## Known problems
 
  - Syncing the textfields between the browsers can be improved.

@@ -39,6 +39,7 @@ const {
     processHtmlContent
 } = require('./components/resourceProcessing')
 
+//setup puppeteer stealth instead of normal puppeteer to support more sites.
 puppeteer.use(pluginStealth());
 
 
@@ -55,10 +56,14 @@ app.get('/domdifferscript.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'domdifferscript.js'));
 });
 app.get('/getContent', (req, res) => {
+    //this getContent function tries to get the hashed url from the cashed resources
+    // and will download the resource if it isn't found
     const url = decodeURIComponent(req.query.url);
     const filepath = path.join(CACHED_RESOURCES_DIR, url);
+    //check if already exists
     if (fs.existsSync(filepath)) {
         var data = JSON.parse(fs.readFileSync(filepath));
+        //returns the specified file and content type if found
         res.setHeader('Content-Type', data.mime);
         if (!data.mime.startsWith('text/')) {
             // Convert base64 back to buffer for non-textual content
@@ -70,6 +75,7 @@ app.get('/getContent', (req, res) => {
         res.status(404).send('File not found');
     }
 });
+
 // Ensure required directories exist
 [CACHED_RESOURCES_DIR].forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -77,8 +83,9 @@ app.get('/getContent', (req, res) => {
     }
 });
 
+//on client connection
 io.on('connection', async (socket) => {
-
+    //start a puppeteer browser
     var puppet = await puppeteer.launch({
         headless: false,
         executablePath: executablePath(),
@@ -87,6 +94,7 @@ io.on('connection', async (socket) => {
             '--disable-features=IsolateOrigins,site-per-process'
         ]
     });
+    //close the puppeteer browser when disconnecting
     socket.on('disconnect', async () => {
         try {
             await puppet.close();
@@ -98,13 +106,18 @@ io.on('connection', async (socket) => {
     const page = await puppet.newPage();
     await page.setViewport({ width: 1366, height: 768 });
 
+    //sets up all socket events except for disconnect function
     await setupSocketEvents(socket, page);
+
+    //sets up change listener code inside the puppeteer window
+    //This is to listen on input changes directly instead of waiting for the main loop
     await setupChangeListeners(socket, page);
 
     page.goto(BASE_URL);
 
     //await sleep(2000);
 
+    //variables needed in main loop
     var oldhead = '<head></head>';
     var oldbodydiv = '<body></body>';
 
@@ -118,49 +131,49 @@ io.on('connection', async (socket) => {
         if (!data) {
             continue;
         }
-        var currentResult = data;
+        //var currentResult = data;
         const $ = cheerio.load(data.mainhtml);
 
         let newhead = $('head').first().prop('outerHTML');
         let newbodydiv = $('body').first().prop('outerHTML');
 
-        if (previousResult) {
-            const changes = [];
-            // Check main page input changes
-            for (let input of currentResult.mainInputs) {
-                const previousInput = previousResult.mainInputs.find(p => p.csspath === input.csspath);
-                if (previousInput && previousInput.value !== input.value) {
-                    changes.push({
-                        csspath: input.csspath,
-                        oldValue: previousInput.value,
-                        newValue: input.value
-                    });
-                }
-            }
-            // // Check iframe input changes
-            // for (let iframe of currentResult.iframes) {
-            //     for (let input of iframe.iframeInputs) {
-            //         const matchingIframe = previousResult.iframes.find(pIframe => pIframe.selector === iframe.selector);
-            //         if (matchingIframe) {
-            //             const previousInput = matchingIframe.iframeInputs.find(p => p.csspath === input.csspath);
-            //             if (previousInput && previousInput.value !== input.value) {
-            //                 changes.push({
-            //                     iframe: iframe.selector,
-            //                     csspath: input.csspath,
-            //                     oldValue: previousInput.value,
-            //                     newValue: input.value
-            //                 });
-            //             }
-            //         }
-            //     }
-            // }
-            // If there are any changes, add them to the allChanges array
-            if (changes.length > 0) {
-                socket.emit('maininputs', changes);
-            }
-        }
+        // if (previousResult) {
+        //     const changes = [];
+        //     // Check main page input changes
+        //     for (let input of currentResult.mainInputs) {
+        //         const previousInput = previousResult.mainInputs.find(p => p.csspath === input.csspath);
+        //         if (previousInput && previousInput.value !== input.value) {
+        //             changes.push({
+        //                 csspath: input.csspath,
+        //                 oldValue: previousInput.value,
+        //                 newValue: input.value
+        //             });
+        //         }
+        //     }
+        //     // // Check iframe input changes
+        //     // for (let iframe of currentResult.iframes) {
+        //     //     for (let input of iframe.iframeInputs) {
+        //     //         const matchingIframe = previousResult.iframes.find(pIframe => pIframe.selector === iframe.selector);
+        //     //         if (matchingIframe) {
+        //     //             const previousInput = matchingIframe.iframeInputs.find(p => p.csspath === input.csspath);
+        //     //             if (previousInput && previousInput.value !== input.value) {
+        //     //                 changes.push({
+        //     //                     iframe: iframe.selector,
+        //     //                     csspath: input.csspath,
+        //     //                     oldValue: previousInput.value,
+        //     //                     newValue: input.value
+        //     //                 });
+        //     //             }
+        //     //         }
+        //     //     }
+        //     // }
+        //     // If there are any changes, add them to the allChanges array
+        //     // if (changes.length > 0) {
+        //     //     socket.emit('maininputs', changes);
+        //     // }
+        // }
         // Update the previousResult for the next iteration
-        previousResult = data;
+        //previousResult = data;
 
         let changes = {};
         if (oldhead != newhead) {
@@ -236,55 +249,12 @@ io.on('connection', async (socket) => {
 
 
 
-
-async function SelectOnPage(selection, page) {
-
-    await page.evaluate((selection) => {
-        // Utility function to get a node from a path
-        function getNodeByCssPath(path) {
-            return document.querySelector(path);
-        }
-        function getNodeFromRelativePath(rootElement, relativePath) {
-            if (!relativePath || !rootElement) {
-                return null;
-            }
-            const steps = relativePath.split('/');
-            let currentNode = rootElement;
-            for (const step of steps) {
-                const [nodeType, index] = step.split(':').map(Number);
-                if (!currentNode.childNodes[index] || currentNode.childNodes[index].nodeType !== nodeType) {
-                    return null;
-                }
-                currentNode = currentNode.childNodes[index];
-            }
-            return currentNode;
-        }
-
-        const startNodeParentElement = getNodeByCssPath(selection.startCssPath);
-        const endNodeParentElement = getNodeByCssPath(selection.endCssPath);
-        var startNode;
-        var endNode;
-        if (selection.startNodePath && selection.endNodePath) {
-            startNode = getNodeFromRelativePath(startNodeParentElement, selection.startNodePath);
-            endNode = getNodeFromRelativePath(endNodeParentElement, selection.endNodePath);
-        }
-        else {
-            startNode = startNodeParentElement;
-            endNode = endNodeParentElement;
-        }
-
-        const range = document.createRange();
-        range.setStart(startNode, selection.startOffset);
-        range.setEnd(endNode, selection.endOffset);
-
-        const newSelection = window.getSelection();
-        newSelection.removeAllRanges();
-        newSelection.addRange(range);
-
-    }, selection);
-}
+//selects text on page
 
 
+
+
+//removes invalid attributes from diffDOM diff object, enable when you run into trouble with some site.
 function RemoveInvalidAttributesFromDiff(diffobj) {
     return diffobj;
     try {
@@ -330,14 +300,6 @@ function RemoveInvalidAttributesFromDiff(diffobj) {
 }
 
 
-
-
-
-
-
-module.exports = {
-    SelectOnPage
-}
 
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
