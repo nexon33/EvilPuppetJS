@@ -167,7 +167,6 @@ async function processHtmlContent(content, baseurl) {
 }
 
 //tries to get the complete html sourcecode of the loaded page, including iframes
-//this 
 async function getMainAndIframesWithoutScripts(page) {
     var limitCounter = 0;
     while (limitCounter < 100) {
