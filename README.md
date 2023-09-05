@@ -4,7 +4,7 @@
 
 ## Overview
 
-EvilPuppet is a proof-of-concept man-in-the-middle tool that uses Puppeteer in the background to capture and stream HTML content to a target browser. More than just streaming, it provides an interface that allows the target browser to remotely control the Puppeteer browser instance, simulating a real user's actions.
+EvilPuppet is a proof-of-concept (MITM)man-in-the-middle tool that uses Puppeteer in the background to capture and stream HTML content to a target browser. More than just streaming, it provides an interface that allows the target browser to remotely control the Puppeteer browser instance, simulating a real user's actions.
 
 ## Features
 
