@@ -47,8 +47,8 @@ async function SelectOnPage(selection, page) {
     }, selection);
 }
 
-async function setupSocketEvents(socket, page, puppet) {
-
+async function setupSocketEvents(socket, page) {
+    //clicks on page
     socket.on('click', async (click) => {
         try {
             const element = await page.waitForSelector(click.cssPath);
@@ -60,13 +60,13 @@ async function setupSocketEvents(socket, page, puppet) {
     });
 
     socket.on('selectionchange', async (selection) => {
-        //console.log('selectionchange');
+        //when selection has changed mirror this
         try {
             if (selection.startCssPath == selection.endCssPath) {
-                await page.evaluate((click) => {
-                    const inputElement = document.querySelector(click.startCssPath);
-                    inputElement.selectionStart = click.startOffset;
-                    inputElement.selectionEnd = click.endOffset;
+                await page.evaluate((selec) => {
+                    const inputElement = document.querySelector(selec.startCssPath);
+                    inputElement.selectionStart = selec.startOffset;
+                    inputElement.selectionEnd = selec.endOffset;
                 }, selection);
             } else {
                 await SelectOnPage(selection, page);
@@ -76,7 +76,8 @@ async function setupSocketEvents(socket, page, puppet) {
         }
 
     });
-
+    //process keypress events, these contain some custom named events
+    //this code is more complicated than it should be but this is to account for different keyboard layouts.
     socket.on('keypress', async (keyinfo) => {
 
         try {
@@ -100,6 +101,8 @@ async function setupSocketEvents(socket, page, puppet) {
             }
 
         } catch (error) {
+            //do a sendcharacter if just pressing the key causes an error.
+            //this probably mostly occurs on other keyboard layouts.
             await page.keyboard.sendCharacter(keyinfo.name);
             console.log(error.message);
         }

@@ -1,3 +1,6 @@
+
+//this will inject javascript code inside the puppeteer window, the reason we do this is because
+//we can get typed changes immediately and send them through sockets so that the text input is more in sync.
 async function setupChangeListeners(socket, page) {
     // Expose a function to be called from the page context
     await page.exposeFunction('onElementChanged', (csspath, value, selectionStart, selectionEnd) => {
